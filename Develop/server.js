@@ -1,10 +1,10 @@
-
 const express = require("express");
-const mongojs = require("mongojs");
-
+const mongoose = require('mongoose');
+const path = require('path');
 const logger = require("morgan");
-
+const PORT = process.env.PORT || 3000;
 const app = express();
+const db = require('./models')
 app.use(logger("dev"));
 
 app.use(express.urlencoded({ extended: true }));
@@ -12,13 +12,10 @@ app.use(express.json());
 
 app.use(express.static("public"));
 
-const databaseUrl = "warmup";
-const collections = ["books"];
-
-const db = mongojs(databaseUrl, collections);
-db.on("error", error => {
-  console.log("Database Error:", error);
-});
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost/workout', {
+  useNewUrlParser: true,
+  useFindAndModify: false
+})
 
 // Routes
 // ======
@@ -27,37 +24,47 @@ db.on("error", error => {
 // the proper mongojs functions for the site to function
 // -/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/
 
-app.get("/exercise", (req, res) => {});
+app.get("/exercise", (req, res) => {
+  res.sendFile(path.join(__dirname, './public/exercise.html'))
+});
 
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, './public/index.html'))
+});
 
+app.get("/stats", (req, res) => {
+  res.sendFile(path.join(__dirname, './public/stats.html'))
+});
+
+app.get('/api/workouts', (req,res)=>{
+  db.find().then(response=>{
+    res.json(response)
+  })
+})
+
+app.get('/api/workouts/range', (req,res)=>{
+  db.find().then(response=>{
+    res.json(response)
+  })
+})
+
+app.put('/api/workouts/:id', (req,res)=>{
+  db.findByIdAndUpdate(req.params.id, 
+    {$push: {exercises:req.body}}).then(response=>res.json(response))
+})
+
+app.post('/api/workouts', (req,res)=>{
+  db.create({}).then(response=>res.json(response))
+})
 
 // Post a book to the mongoose database
-app.post("/submit", ({ body }, res) => {
+app.post("/workout", ({ body }, res) => {
   // Save the request body as an object called book
   const workout = body;
 
-
-});
-
-// Find all books marked as read
-app.get("/read", (req, res) => {});
-
-// Find all books marked as unread
-app.get("/unread", (req, res) => {});
-
-// Mark a book as having been read
-app.put("/markread/:id", (req, res) => {
-  // Remember: when searching by an id, the id needs to be passed in
-  // as (mongojs.ObjectId(IdYouWantToFind))
-});
-
-// Mark a book as having been not read
-app.put("/markunread/:id", (req, res) => {
-  // Remember: when searching by an id, the id needs to be passed in
-  // as (mongojs.ObjectId(IdYouWantToFind))
 });
 
 // Listen on port 3000
-app.listen(3000, () => {
+app.listen(PORT, () => {
   console.log("App running on port 3000!");
 });
